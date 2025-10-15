@@ -1,0 +1,54 @@
+This Python script provides a Windows-compatible way to capture TCP/UDP packets and monitor network activity using built-in Windows utilities such as netsh, netstat, and PowerShell. It eliminates the need for third-party tools like Wireshark.
+
+Features
+List available network interfaces (--interfaces)
+
+Start packet capture with netsh trace (--capture)
+
+Target specific interface for capture (--interface "Ethernet")
+
+Specify output file and max capture size
+
+Monitor active TCP/UDP connections (--monitor)
+
+Stop running capture sessions (--stop)
+
+Convert .etl captures to readable text using netsh trace convert
+
+Requirements
+Windows 7 or later
+
+Python 3.x
+
+Administrator privileges (for packet capture)
+
+Command-Line Options
+Option	Description	Example
+--interfaces	Lists available network interfaces	python capture.py --interfaces
+--capture	Starts a packet capture	python capture.py --capture
+--interface <name>	Captures traffic on a specific interface	python capture.py --capture --interface "Ethernet"
+--output <file>	Sets capture output file name	python capture.py --capture --output data.etl
+--max-size <MB>	Sets maximum capture file size	python capture.py --capture --max-size 200
+--monitor	Displays active TCP/UDP connections continuously	python capture.py --monitor
+--stop	Stops any running captures	python capture.py --stop
+Usage Examples
+List interfaces:
+
+text
+python capture.py --interfaces
+Start capture on Ethernet:
+
+text
+python capture.py --capture --interface "Ethernet" --output network.etl
+Monitor connections:
+
+text
+python capture.py --monitor
+Stop capture:
+
+text
+python capture.py --stop
+Notes
+The .etl format is binary. Use --convert or Tools like Microsoft Message Analyzer to analyze it in depth.
+
+Captures are system-wide; filtering should be done post-processing.

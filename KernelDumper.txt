@@ -1,0 +1,268 @@
+================================================================================
+        WINDOWS MEMORY FORENSICS AUTOMATION TOOL - DOCUMENTATION
+================================================================================
+
+VERSION: 1.0
+AUTHOR: Digital Forensics Automation Script
+DATE: October 15, 2025
+PLATFORM: Windows
+PYTHON VERSION: 3.x
+
+================================================================================
+                              OVERVIEW
+================================================================================
+
+This script automates Windows memory forensics by performing two main tasks:
+
+1. MEMORY ACQUISITION: Uses WinPMEM to capture a raw memory dump from RAM
+2. MEMORY ANALYSIS: Uses Volatility3 to analyze the dump and extract artifacts
+
+The tool is designed for incident response, malware analysis, and digital 
+forensics investigations.
+
+================================================================================
+                            PREREQUISITES
+================================================================================
+
+REQUIRED SOFTWARE:
+- Python 3.x (with subprocess, os, sys modules - standard library)
+- WinPMEM (Windows memory acquisition tool)
+- Volatility3 (Memory forensics framework)
+
+REQUIRED PERMISSIONS:
+- Administrator/Elevated privileges (for memory acquisition)
+- Read/Write access to forensics directories
+
+DIRECTORY STRUCTURE:
+C:\Users\Tanush\Documents\volatility3\     (Volatility3 installation)
+C:\MemoryDumps\                            (WinPMEM executable location)
+C:\Forensics\                              (Memory dump storage)
+C:\Forensics\results\                      (Analysis results output)
+
+================================================================================
+                          CONFIGURATION
+================================================================================
+
+CONFIGURABLE PATHS (modify as needed):
+
+1. VOL_PATH
+   - Location: C:\Users\Tanush\Documents\volatility3
+   - Purpose: Volatility3 installation directory
+   - Contains: vol.py (main Volatility script)
+
+2. WINPMEM_PATHS
+   - Default: C:\MemoryDumps\winpmem_mini_x64_rc2.exe
+   - Purpose: List of possible WinPMEM executable locations
+   - Note: Script searches all paths in list
+
+3. DUMP_PATH
+   - Location: C:\Forensics\memdump.raw
+   - Purpose: Output file for raw memory dump
+   - Format: Raw binary memory image
+
+4. RESULT_DIR
+   - Location: C:\Forensics\results
+   - Purpose: Storage for all Volatility analysis results
+   - Format: JSON files
+
+================================================================================
+                          EXECUTION FLOW
+================================================================================
+
+STAGE 1: INITIALIZATION
+- Creates results directory if not exists
+- Searches for WinPMEM executable in configured paths
+- Validates WinPMEM availability
+- Lists Desktop files if WinPMEM not found (troubleshooting)
+
+STAGE 2: MEMORY ACQUISITION
+- Executes WinPMEM with target dump path
+- Captures physical RAM contents to disk
+- Verifies dump file creation and size
+- Handles WinPMEM exit code quirks
+- Displays dump file size on success
+
+STAGE 3: PRIMARY ANALYSIS
+- Runs Volatility3 windows.pslist module
+- Extracts list of running processes
+- Outputs results to processes.json
+
+STAGE 4: EXTENDED ANALYSIS
+- Runs additional Volatility modules:
+  * windows.netstat    - Network connections
+  * windows.malfind    - Malware detection
+  * windows.driverscan - Loaded drivers
+- Each module outputs to separate JSON file
+- Continues on individual module failures
+
+================================================================================
+                        VOLATILITY MODULES
+================================================================================
+
+1. windows.pslist
+   - Lists all running processes
+   - Output: processes.json
+   - Data: PID, PPID, ImageFileName, Offset, Threads, Handles
+
+2. windows.netstat
+   - Shows active network connections
+   - Output: windows.netstat.json
+   - Data: Protocol, LocalAddr, LocalPort, ForeignAddr, State, PID
+
+3. windows.malfind
+   - Detects malicious code injection
+   - Output: windows.malfind.json
+   - Data: Process, PID, Address, Vad Tag, Protection, Disassembly
+
+4. windows.driverscan
+   - Enumerates loaded kernel drivers
+   - Output: windows.driverscan.json
+   - Data: Offset, Start, Size, Service Key, Driver Name, Path
+
+================================================================================
+                          USAGE INSTRUCTIONS
+================================================================================
+
+BASIC USAGE:
+1. Open Command Prompt or PowerShell as Administrator
+2. Navigate to script directory
+3. Run: python memory_forensics.py
+
+WORKFLOW:
+[Start] 
+   ↓
+[Validate WinPMEM exists]
+   ↓
+[Acquire memory dump] → Creates memdump.raw
+   ↓
+[Run pslist analysis] → Creates processes.json
+   ↓
+[Run netstat analysis] → Creates windows.netstat.json
+   ↓
+[Run malfind analysis] → Creates windows.malfind.json
+   ↓
+[Run driverscan analysis] → Creates windows.driverscan.json
+   ↓
+[Complete] → All results in C:\Forensics\results\
+
+================================================================================
+                          ERROR HANDLING
+================================================================================
+
+ERROR: WinPMEM Not Found
+- Cause: WinPMEM executable missing or incorrect path
+- Solution: Check WINPMEM_PATHS configuration
+- Script Action: Lists potential matches on Desktop, exits
+
+ERROR: Memory Dump Failed
+- Cause: Insufficient permissions or disk space
+- Solution: Run as Administrator, check disk space
+- Script Action: Displays WinPMEM output/errors, exits
+
+ERROR: Volatility Module Failed
+- Cause: Incompatible dump format or missing dependencies
+- Solution: Verify Volatility3 installation, check dump integrity
+- Script Action: Prints error message, continues with next module
+
+ERROR: File Not Found
+- Cause: Invalid path to WinPMEM or Volatility
+- Solution: Verify all configured paths exist
+- Script Action: Displays error details, exits
+
+================================================================================
+                          OUTPUT FILES
+================================================================================
+
+1. memdump.raw
+   - Type: Binary memory image
+   - Size: Varies (typically 4-32 GB depending on RAM)
+   - Location: C:\Forensics\
+   - Purpose: Raw memory dump for analysis
+
+2. processes.json
+   - Type: JSON structured data
+   - Content: Running processes with metadata
+   - Use: Process tree analysis, baseline comparison
+
+3. windows.netstat.json
+   - Type: JSON structured data
+   - Content: Network connections and sockets
+   - Use: Network activity investigation, C2 detection
+
+4. windows.malfind.json
+   - Type: JSON structured data
+   - Content: Suspicious memory regions
+   - Use: Malware detection, code injection analysis
+
+5. windows.driverscan.json
+   - Type: JSON structured data
+   - Content: Kernel drivers and modules
+   - Use: Rootkit detection, driver analysis
+
+================================================================================
+                        SECURITY CONSIDERATIONS
+================================================================================
+
+- Requires Administrator privileges for memory access
+- Memory dumps contain sensitive data (passwords, keys, PII)
+- Store dumps in encrypted volumes when possible
+- Securely delete dumps after analysis
+- Follow organizational data handling policies
+- Consider legal implications in forensic investigations
+
+================================================================================
+                          TROUBLESHOOTING
+================================================================================
+
+ISSUE: Script exits immediately
+CHECK: Running as Administrator
+
+ISSUE: WinPMEM not found
+CHECK: Path in WINPMEM_PATHS matches actual location
+
+ISSUE: Volatility errors
+CHECK: vol.py exists in VOL_PATH directory
+CHECK: Volatility3 dependencies installed
+
+ISSUE: Empty or failed dump
+CHECK: Sufficient disk space (at least RAM size + 20%)
+CHECK: Antivirus not blocking WinPMEM
+
+ISSUE: Module analysis fails
+CHECK: Memory dump integrity
+CHECK: Volatility3 version compatibility
+
+================================================================================
+                          CUSTOMIZATION
+================================================================================
+
+ADD MORE MODULES:
+Append to modules list:
+modules = ["windows.netstat", "windows.malfind", "windows.driverscan", 
+           "windows.cmdline", "windows.registry.hivelist"]
+
+CHANGE OUTPUT FORMAT:
+Replace "--output", "json" with:
+- "csv" for comma-separated values
+- "pretty" for human-readable text
+
+ADD MULTIPLE WINPMEM LOCATIONS:
+WINPMEM_PATHS = [
+    r"C:\MemoryDumps\winpmem_mini_x64_rc2.exe",
+    r"C:\Tools\winpmem.exe",
+    r"C:\Users\Tanush\Desktop\winpmem.exe"
+]
+
+================================================================================
+                              NOTES
+================================================================================
+
+- Memory acquisition can take 5-30 minutes depending on RAM size
+- Volatility analysis can take 10-60 minutes per module
+- Large memory dumps (>16GB) may require substantial processing time
+- Ensure adequate disk space (2x RAM size recommended)
+- Results are in JSON format for easy parsing and automation
+
+================================================================================
+                          END OF DOCUMENTATION
+================================================================================

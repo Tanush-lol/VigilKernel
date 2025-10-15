@@ -1,0 +1,77 @@
+Features
+Real-time monitoring of memory allocations (kmalloc) and frees (kfree)
+
+Output includes timestamp, process ID, command name, and relevant pointers or sizes
+
+Simple character device interface accessible at /dev/kmmon
+
+Requirements
+Linux kernel with kprobes, miscdevice, and relevant headers
+
+Root privileges for module management
+
+GCC and make for compilation
+
+Installation
+Clone or Download the Code
+
+Copy the provided kmalloc_monitor.c file into an empty directory.
+
+Create a Makefile
+
+Create a Makefile with these contents:
+
+text
+obj-m += kmalloc_monitor.o
+
+all:
+    make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
+
+clean:
+    make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+Build the Kernel Module
+
+Run in the module directory:
+
+text
+make
+This will produce a kmalloc_monitor.ko file.
+
+Load the Module
+
+Use root privileges to insert the module:
+
+text
+sudo insmod kmalloc_monitor.ko
+Monitor Allocations and Frees
+
+Read incoming events with:
+
+text
+sudo cat /dev/kmmon
+Each line corresponds to a kmalloc or kfree event, with details such as:
+
+text
+ALLOC ts=<timestamp> pid=<pid> comm=<process> size=<size> addr_hint=<0x...>
+FREE  ts=<timestamp> pid=<pid> comm=<process> ptr=<pointer>
+Unload the Module
+
+After you finish monitoring, remove the module with:
+
+text
+sudo rmmod kmalloc_monitor
+Notes
+Make sure your kernel supports kprobes and loading external modules.
+
+If /dev/kmmon does not appear, check kernel logs (dmesg) for errors.
+
+The output is newline-separated and formatted for easy parsing or logging.
+
+Troubleshooting
+Compilation errors: Check you have kernel headers installed (linux-headers-$(uname -r) on most distributions).
+
+Loading errors: Review dmesg output for details.
+
+Missing /dev/kmmon: The module must load successfully; ensure no symbol mismatches and check logs.
+
+Save or distribute this file as README.txt or INSTALL.txt as needed. This gives a straightforward guide for building, installing, and using your kernel module.
