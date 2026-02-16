@@ -20,7 +20,7 @@
 #include <linux/seq_file.h>
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("ChatGPT (example)");
+MODULE_AUTHOR("(example)");
 MODULE_DESCRIPTION("Realtime kmalloc/kfree monitor via /dev/kmmon (kprobes)");
 MODULE_VERSION("0.5");
 
@@ -250,3 +250,4 @@ static void __exit kmmon_exit(void)
 
 module_init(kmmon_init);
 module_exit(kmmon_exit);
+
