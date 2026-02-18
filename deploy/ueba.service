@@ -1,0 +1,22 @@
+[Unit]
+Description=VigilKernel UEBA Daemon
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/opt/vigilkernel/venv/bin/python /opt/vigilkernel/main.py --config /etc/ueba/config.yaml
+WorkingDirectory=/opt/vigilkernel
+Restart=always
+RestartSec=2
+User=root
+Group=root
+
+# Hardening (keep compatible with BPF/BCC needs)
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/var/log/ueba /etc/ueba
+
+[Install]
+WantedBy=multi-user.target
