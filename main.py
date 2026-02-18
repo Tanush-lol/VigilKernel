@@ -75,7 +75,11 @@ def main() -> int:
     signal.signal(signal.SIGINT, _handle_signal)
     signal.signal(signal.SIGTERM, _handle_signal)
 
+ codex/create-ueba-system-for-linux-mint-n8q14h
     log_event(app_logger, "daemon_start", {"message": "UEBA started"})
+
+    app_logger.info("UEBA started")
+ main
     while RUNNING:
         try:
             manager.poll(timeout_ms=500)
@@ -87,7 +91,11 @@ def main() -> int:
     if user_monitor:
         user_monitor.stop()
     manager.cleanup()
+ codex/create-ueba-system-for-linux-mint-n8q14h
     log_event(app_logger, "daemon_stop", {"message": "UEBA stopped"})
+
+    app_logger.info("UEBA stopped")
+ main
     return 0
 
 

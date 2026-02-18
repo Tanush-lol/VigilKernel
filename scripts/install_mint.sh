@@ -34,7 +34,11 @@ rsync -a --delete \
   "$REPO_DIR"/ "$INSTALL_DIR"/
 
 echo "[3/7] Creating Python virtual environment"
+ codex/create-ueba-system-for-linux-mint-n8q14h
 python3 -m venv --system-site-packages "$VENV_DIR"
+
+python3 -m venv "$VENV_DIR"
+ main
 "$VENV_DIR/bin/pip" install --upgrade pip
 "$VENV_DIR/bin/pip" install -r "$INSTALL_DIR/requirements.txt"
 
@@ -44,11 +48,14 @@ cp "$INSTALL_DIR/config/config.yaml" "$CONFIG_DIR/config.yaml"
 chown -R root:root "$CONFIG_DIR" "$LOG_DIR"
 chmod 755 "$LOG_DIR"
 
+ codex/create-ueba-system-for-linux-mint-n8q14h
 # Ensure log file exists before first tail/read
 : > "$LOG_DIR/events.log"
 chown root:root "$LOG_DIR/events.log"
 chmod 640 "$LOG_DIR/events.log"
 
+
+ main
 echo "[5/7] Installing systemd service"
 cp "$INSTALL_DIR/deploy/ueba.service" /etc/systemd/system/ueba.service
 systemctl daemon-reload
