@@ -64,7 +64,11 @@ If you still want near-automatic deployment:
 - Linux kernel **5.4+** (recommended)
 - Root privileges
 - Python 3.10+
+ codex/create-ueba-system-for-linux-mint-n8q14h
+- BCC and Python bindings (from distro packages)
+
 - BCC and Python bindings
+ main
 
 ## Quick Install on Mint VM
 
@@ -77,7 +81,11 @@ sudo bash scripts/install_mint.sh
 Installer actions:
 1. Installs apt dependencies (`python3-bpfcc`, headers, clang/llvm, etc.).
 2. Copies project to `/opt/vigilkernel`.
+ codex/create-ueba-system-for-linux-mint-n8q14h
+3. Creates Python venv with `--system-site-packages` so distro `python3-bpfcc` is visible, then installs pip deps.
+
 3. Creates Python venv and installs pip dependencies.
+ main
 4. Copies config to `/etc/ueba/config.yaml`.
 5. Installs and starts `ueba.service`.
 
@@ -86,7 +94,11 @@ Installer actions:
 ```bash
 sudo apt update
 sudo apt install -y python3 python3-pip python3-bpfcc bpfcc-tools libbpfcc-dev linux-headers-$(uname -r) clang llvm make
+ codex/create-ueba-system-for-linux-mint-n8q14h
+pip3 install -r requirements.txt   # installs pyyaml (BCC comes from apt python3-bpfcc)
+
 pip3 install -r requirements.txt
+ main
 ```
 
 > Depending on distro packaging, `bcc` Python package may already be provided by `python3-bpfcc`.
@@ -134,6 +146,12 @@ Stop with `Ctrl+C` or `SIGTERM`.
 
 ## Service Operations
 
+ codex/create-ueba-system-for-linux-mint-n8q14h
+If `events.log` is missing right after startup, rerun the installer from this update; it now pre-creates `/var/log/ueba/events.log` and the daemon also writes a startup JSON event immediately.
+
+
+
+ main
 ```bash
 sudo systemctl status ueba
 sudo journalctl -u ueba -f
