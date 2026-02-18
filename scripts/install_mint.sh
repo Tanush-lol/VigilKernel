@@ -38,16 +38,16 @@ python3 -m venv --system-site-packages "$VENV_DIR"
 "$VENV_DIR/bin/pip" install --upgrade pip
 "$VENV_DIR/bin/pip" install -r "$INSTALL_DIR/requirements.txt"
 
-# Ensure log file exists before first tail/read
-touch "$LOG_DIR/events.log"
-chown root:root "$LOG_DIR/events.log"
-chmod 640 "$LOG_DIR/events.log"
-
 echo "[4/7] Creating config + log directories"
 mkdir -p "$CONFIG_DIR" "$LOG_DIR"
 cp "$INSTALL_DIR/config/config.yaml" "$CONFIG_DIR/config.yaml"
 chown -R root:root "$CONFIG_DIR" "$LOG_DIR"
 chmod 755 "$LOG_DIR"
+
+# Ensure log file exists before first tail/read
+: > "$LOG_DIR/events.log"
+chown root:root "$LOG_DIR/events.log"
+chmod 640 "$LOG_DIR/events.log"
 
 echo "[5/7] Installing systemd service"
 cp "$INSTALL_DIR/deploy/ueba.service" /etc/systemd/system/ueba.service
