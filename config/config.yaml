@@ -1,0 +1,14 @@
+monitors:
+  process_exec: true
+  file_open: true
+  network: true
+  user_activity: true
+  privilege_events: true
+
+logging:
+  path: /var/log/ueba/events.log
+  max_size_mb: 50
+  backups: 5
+
+filters:
+  exclude_comm: ["chrome", "firefox"]
