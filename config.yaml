@@ -1,0 +1,45 @@
+# KernelShark Activity Logger - Configuration for Linux Mint
+# Log file paths (use absolute paths when running as systemd service)
+log_file: "/var/log/kernelshark_activity.log"
+# Optional: separate files per category (if set, main log_file is still used for combined view)
+# log_user: "/var/log/kernelshark_user.log"
+# log_device: "/var/log/kernelshark_device.log"
+# log_network: "/var/log/kernelshark_network.log"
+# log_kernel: "/var/log/kernelshark_kernel.log"
+
+# User activity
+user:
+  audit_log: "/var/log/audit/audit.log"
+  wtmp_path: "/var/log/wtmp"
+  btmp_path: "/var/log/btmp"
+  poll_interval_sec: 2
+
+# Device activity (udev)
+device:
+  enabled: true
+  subsystems: ["input", "block", "usb", "net"]  # block=disks, input=keyboard/mouse
+
+# Network activity (pyshark)
+network:
+  enabled: true
+  interface: "any"  # or "eth0", "wlan0", etc.
+  # Log only summary (src, dst, protocol) to avoid huge logs; set false for more detail
+  summary_only: true
+  # Optional BPF filter to reduce noise, e.g. "tcp or udp"
+  bpf_filter: "tcp or udp or icmp"
+  # Sniff in chunks (packet_count per batch) for summary_only
+  packet_batch: 50
+
+# Kernel trace (ftrace / trace_pipe) - requires root and tracefs
+kernel_trace:
+  enabled: true
+  tracefs: "/sys/kernel/tracing"
+  # Events to trace (sched, block, syscalls, etc.)
+  events: ["sched:sched_switch", "sched:sched_wakeup", "block:block_rq_issue", "block:block_rq_complete"]
+  # Alternative: use trace-cmd to record and periodically report (trace_cmd_interval_sec)
+  use_trace_cmd: false
+  trace_cmd_interval_sec: 60
+
+# Log rotation (handled externally by logrotate; we just write to log_file)
+# Max line length to truncate (0 = no truncate)
+max_line_length: 2048

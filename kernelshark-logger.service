@@ -1,0 +1,21 @@
+[Unit]
+Description=KernelShark Activity Logger (user, device, network, kernel)
+After=network.target auditd.service
+
+[Service]
+Type=simple
+# Use the path where you cloned/copied kernelShark
+ExecStart=/usr/bin/python3 -u /opt/kernelshark/main.py -c /opt/kernelshark/config.yaml
+Restart=on-failure
+RestartSec=10
+# Required for live capture (NET_RAW); trace_pipe/audit need root
+CapabilityBoundingSet=CAP_NET_RAW CAP_SYS_PTRACE
+# Optional: run as root for full access to audit, trace_pipe, /var/log
+# User=root
+# Or run as a dedicated user and give read access to audit + trace (see README)
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=kernelshark
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,4 @@
+# Kernel-level activity logger for Linux Mint
+pyshark>=0.6
+pyudev>=0.24.0
+PyYAML>=6.0
