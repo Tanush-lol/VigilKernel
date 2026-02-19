@@ -1,0 +1,3 @@
+# UEBA daemon - Python deps (BCC is a system package: python3-bpfcc)
+PyYAML>=6.0
+pyudev>=0.24.0

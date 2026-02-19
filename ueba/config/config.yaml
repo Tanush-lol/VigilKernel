@@ -1,0 +1,52 @@
+# UEBA (User and Entity Behavior Analytics) - Configuration
+# Paths and toggles for kernel-level monitoring on Linux Mint / Debian
+
+# Logging: JSON lines to file with rotation
+logging:
+  path: "/var/log/ueba/events.log"
+  max_bytes: 10485760   # 10 MB
+  backup_count: 5
+  # If path not writable, fallback used (see main.py)
+
+# Enable/disable monitors (eBPF and user-space)
+monitors:
+  exec: true        # Process execution (execve)
+  file: true        # File open/openat (binaries, libraries)
+  network: true     # Connect, bind, accept, listen
+  user_session: true   # Logins, TTY, wtmp/utmp (user-space)
+  block: true       # Block device I/O (disks, external drives)
+  audit: true       # Audit log tail (privilege, critical events)
+
+# exec monitor: filter by path prefix to reduce noise (empty = all)
+exec_filter:
+  path_prefix: []   # e.g. ["/usr", "/bin", "/home"]
+
+# file monitor: filter by path prefix (e.g. only executables/libraries)
+file_filter:
+  path_prefix: []   # e.g. ["/usr/lib", "/lib", "/bin", "/opt"]
+  log_libraries: true
+
+# network monitor
+network_filter:
+  include_listen: true
+  include_connect: true
+  include_accept: true
+  include_bind: true
+
+# user_session: paths for wtmp, utmp, btmp
+user_session:
+  wtmp: "/var/log/wtmp"
+  utmp: "/var/run/utmp"
+  btmp: "/var/log/btmp"
+  poll_interval_sec: 3
+
+# audit: tail audit log for privilege escalation, module load, etc.
+audit:
+  log_path: "/var/log/audit/audit.log"
+  poll_interval_sec: 2
+
+# block: udev + optional eBPF block events (disk connect, I/O)
+block:
+  udev_subsystems: ["block", "usb"]
+  # eBPF block events (block_rq_issue/complete) - can be noisy
+  trace_block_io: false
