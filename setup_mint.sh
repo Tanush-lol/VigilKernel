@@ -84,7 +84,7 @@ echo "[6/6] Verifying installation..."
 PASS=true
 
 check() {
-    if $1 2>/dev/null; then
+    if eval "$1" 2>/dev/null; then
         echo "  OK: $2"
     else
         echo "  FAIL: $2"
@@ -96,14 +96,14 @@ check "python3 -c 'import yaml'" "PyYAML"
 check "python3 -c 'import pyudev'" "pyudev"
 check "python3 -c 'import pyshark'" "pyshark"
 check "python3 -c 'from bcc import BPF'" "BCC (eBPF)"
-check "which tshark" "tshark"
-check "which trace-cmd" "trace-cmd"
-check "which auditctl" "auditd"
+check "which tshark > /dev/null" "tshark"
+check "which trace-cmd > /dev/null" "trace-cmd"
+check "which auditctl > /dev/null" "auditd"
 check "test -f /sys/kernel/tracing/trace_pipe" "tracefs"
 
 # Verify UEBA config loads
 cd "$REPO_DIR/ueba"
-check "python3 -c \"import sys; sys.path.insert(0,'.'); from config_parser import load_config; load_config(); print('config OK')\"" "UEBA config"
+check "python3 -c 'import sys; sys.path.insert(0,\".\"); from config_parser import load_config; load_config(); print(\"config OK\")'" "UEBA config"
 
 echo ""
 echo "==========================================="
