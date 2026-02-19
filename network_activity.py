@@ -75,12 +75,12 @@ def start_network_logger(
                     if s:
                         write_log("NETWORK", s)
 
-                cap.apply_on_packets(on_packet, timeout=1)
                 while not stop.is_set():
-                    cap.sniff(packet_count=packet_batch, timeout=5)
-                    for pkt in cap:
-                        on_packet(pkt)
-                    cap.clear()
+                    try:
+                        cap.apply_on_packets(on_packet, timeout=10)
+                    except Exception:
+                        if stop.is_set():
+                            break
         except Exception as e:
             write_log("NETWORK", f"pyshark start error (need root?): {e}")
 

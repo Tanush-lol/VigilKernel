@@ -50,27 +50,33 @@ def start_block_udev_source(
                 except (ValueError, OSError):
                     pass
             monitor.start()
-            for device in monitor:
-                if stop.is_set():
-                    break
-                if allowed and (device.subsystem or "") not in allowed:
+            import select
+            # Use poll with timeout so we can check stop event
+            while not stop.is_set():
+                ready, _, _ = select.select([monitor.fileno()], [], [], 1.0)
+                if not ready:
                     continue
-                try:
-                    info = _device_info(device)
-                    on_event({
-                        "@timestamp": iso_timestamp(),
-                        "event_type": "device",
-                        "device_action": info["action"],
-                        "subsystem": info["subsystem"],
-                        "devnode": info["devnode"],
-                        "id_vendor": info["id_vendor"],
-                        "id_model": info["id_model"],
-                        "id_serial": info["id_serial"],
-                        "id_fs_type": info["id_fs_type"],
-                        "id_fs_label": info["id_fs_label"],
-                    })
-                except Exception:
-                    pass
+                for device in iter(monitor.poll, None):
+                    if device is None:
+                        break
+                    if allowed and (device.subsystem or "") not in allowed:
+                        continue
+                    try:
+                        info = _device_info(device)
+                        on_event({
+                            "@timestamp": iso_timestamp(),
+                            "event_type": "device",
+                            "device_action": info["action"],
+                            "subsystem": info["subsystem"],
+                            "devnode": info["devnode"],
+                            "id_vendor": info["id_vendor"],
+                            "id_model": info["id_model"],
+                            "id_serial": info["id_serial"],
+                            "id_fs_type": info["id_fs_type"],
+                            "id_fs_label": info["id_fs_label"],
+                        })
+                    except Exception:
+                        pass
         except Exception:
             pass
 

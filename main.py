@@ -110,7 +110,9 @@ def main() -> None:
         stop.wait()
     except KeyboardInterrupt:
         pass
-    shutdown()
+    finally:
+        if not stop.is_set():
+            shutdown()
 
 
 if __name__ == "__main__":

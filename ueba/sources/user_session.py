@@ -22,7 +22,9 @@ def _run_last(path: str, num: int) -> list:
             timeout=5,
         )
         if r.returncode == 0 and r.stdout:
-            return [l.strip() for l in r.stdout.strip().split("\n") if l.strip()]
+            lines = [l.strip() for l in r.stdout.strip().split("\n") if l.strip()]
+            # Filter out footer lines like "wtmp begins ..." / "btmp begins ..."
+            return [l for l in lines if not l.startswith("wtmp begins") and not l.startswith("btmp begins")]
     except (FileNotFoundError, subprocess.TimeoutExpired, PermissionError):
         pass
     return []

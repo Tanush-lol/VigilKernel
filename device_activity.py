@@ -54,17 +54,23 @@ def start_device_logger(subsystems: List[str], stop: threading.Event) -> None:
                 except (ValueError, OSError):
                     pass
             monitor.start()
-            # If multiple subsystems, we didn't set a filter; filter in loop
-            for device in monitor:
-                if allowed and (device.subsystem or "") not in allowed:
+            import select
+            # Use poll with timeout so we can check stop event
+            while not stop.is_set():
+                # Wait up to 1 second for a device event
+                ready, _, _ = select.select([monitor.fileno()], [], [], 1.0)
+                if not ready:
                     continue
-                if stop.is_set():
-                    break
-                try:
-                    msg = _device_summary(device)
-                    write_log("DEVICE", msg)
-                except Exception:
-                    pass
+                for device in iter(monitor.poll, None):
+                    if device is None:
+                        break
+                    if allowed and (device.subsystem or "") not in allowed:
+                        continue
+                    try:
+                        msg = _device_summary(device)
+                        write_log("DEVICE", msg)
+                    except Exception:
+                        pass
         except Exception as e:
             write_log("DEVICE", f"udev monitor error: {e}")
 

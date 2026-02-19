@@ -39,22 +39,11 @@ def load_exec_monitor(
         sys.stderr.write(f"exec_monitor BPF load failed: {e}\n")
         return None, []
 
-    # Kernel 4.17+ uses __x64_sys_execve; older use sys_execve
-    exec_symbols = ["__x64_sys_execve", "sys_execve", "__ia32_sys_execve"]
-    attached = []
-    for sym in exec_symbols:
-        try:
-            bpf.attach_kprobe(event=sym, fn_name="trace_execve_entry")
-            attached.append(("kprobe", sym, "trace_execve_entry"))
-            break
-        except Exception:
-            continue
-    if not attached:
-        sys.stderr.write("exec_monitor: could not attach to any execve symbol\n")
-        return bpf, []
+    # Tracepoint is auto-attached by BCC TRACEPOINT_PROBE macro
+    attached = [("tracepoint", "syscalls:sys_enter_execve", "tracepoint__syscalls__sys_enter_execve")]
 
     def _perf_cb(cpu: int, data: bytes, size: int) -> None:
-        if size < 4 + 4 + 16 + 256 + 256:
+        if size < 8 + 4 + 4 + 16 + 256 + 256:
             return
         # C struct: u64 ts, u32 pid, u32 uid, char comm[16], char filename[256], char argv[256]
         ts = struct.unpack_from("Q", data, 0)[0]
@@ -91,17 +80,8 @@ def load_file_monitor(
         sys.stderr.write(f"file_monitor BPF load failed: {e}\n")
         return None, []
 
-    openat_symbols = ["__x64_sys_openat", "sys_openat", "__ia32_sys_openat"]
-    attached = []
-    for sym in openat_symbols:
-        try:
-            bpf.attach_kprobe(event=sym, fn_name="trace_openat_entry")
-            attached.append(("kprobe", sym, "trace_openat_entry"))
-            break
-        except Exception:
-            continue
-    if not attached:
-        return bpf, []
+    # Tracepoint is auto-attached by BCC TRACEPOINT_PROBE macro
+    attached = [("tracepoint", "syscalls:sys_enter_openat", "tracepoint__syscalls__sys_enter_openat")]
 
     def _perf_cb(cpu: int, data: bytes, size: int) -> None:
         if size < 8 + 4 + 4 + 4 + 16 + 256:
@@ -176,13 +156,17 @@ def load_net_monitor(
         sport = struct.unpack_from("H", data, 28)[0]
         dport = struct.unpack_from("H", data, 30)[0]
         comm = data[32:48].split(b"\x00")[0].decode("utf-8", errors="replace")
-        # Ports are in network byte order in kernel
         import socket
-        sport = socket.ntohs(sport) if sport else 0
+        # skc_num (sport for connect/listen/bind) is in host byte order
+        # skc_dport is in network byte order
         dport = socket.ntohs(dport) if dport else 0
+        # saddr/daddr are in network byte order in the kernel;
+        # struct.unpack_from("I") reads them as a raw 32-bit value.
+        # Use "<I" (little-endian pack) to preserve the original network-order bytes
+        # for inet_ntoa which expects network byte order input.
         def _ip4(i):
             try:
-                return socket.inet_ntoa(struct.pack(">I", i & 0xFFFFFFFF))
+                return socket.inet_ntoa(struct.pack("<I", i & 0xFFFFFFFF))
             except Exception:
                 return str(i)
         ev = {
@@ -204,10 +188,21 @@ def load_net_monitor(
 
 
 def _ns_to_iso(ns: int) -> str:
+    """Convert bpf_ktime_get_ns() (monotonic/boot time) to wall-clock ISO8601.
+
+    bpf_ktime_get_ns() returns nanoseconds since boot, NOT epoch time.
+    We compute the offset between monotonic and real (wall) clock once,
+    then apply it to convert.
+    """
+    import time as _time
     from datetime import datetime, timezone
     if ns <= 0:
         return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
-    sec = ns // 1_000_000_000
-    nsec = (ns % 1_000_000_000) // 1_000
+    # Compute wall-clock epoch from boot-time nanoseconds
+    boot_ns = _time.clock_gettime_ns(_time.CLOCK_BOOTTIME)
+    real_ns = _time.clock_gettime_ns(_time.CLOCK_REALTIME)
+    epoch_ns = ns + (real_ns - boot_ns)
+    sec = epoch_ns // 1_000_000_000
+    usec = (epoch_ns % 1_000_000_000) // 1_000
     dt = datetime.fromtimestamp(sec, tz=timezone.utc)
-    return dt.strftime("%Y-%m-%dT%H:%M:%S") + f".{nsec:06d}Z"
+    return dt.strftime("%Y-%m-%dT%H:%M:%S") + f".{usec:06d}Z"

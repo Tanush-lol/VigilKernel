@@ -147,14 +147,20 @@ def main() -> None:
     # --- Poll perf buffers and keep alive ---
     try:
         while not stop.is_set():
-            for bpf in bpf_instances:
-                try:
-                    bpf.perf_buffer_poll(timeout=100)
-                except Exception:
-                    pass
+            if bpf_instances:
+                for bpf in bpf_instances:
+                    try:
+                        bpf.perf_buffer_poll(timeout=100)
+                    except Exception:
+                        pass
+            else:
+                # No eBPF monitors; sleep to avoid busy-looping
+                stop.wait(timeout=1.0)
     except KeyboardInterrupt:
         pass
-    shutdown()
+    finally:
+        if not stop.is_set():
+            shutdown()
 
 
 if __name__ == "__main__":

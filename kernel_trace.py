@@ -31,7 +31,7 @@ def _disable_events(tracefs: str) -> None:
     try:
         set_event = Path(tracefs) / "set_event"
         with open(set_event, "w") as f:
-            f.write("disable_all\n")
+            f.write("\n")
     except (PermissionError, OSError):
         pass
 
@@ -85,8 +85,12 @@ def run_trace_cmd_report(
         while not stop.is_set():
             try:
                 # trace-cmd record without a command runs until killed; run with sleep to limit duration
+                cmd = ["trace-cmd", "record"]
+                for e in events:
+                    cmd.extend(["-e", e])
+                cmd.extend(["-o", out_dat])
                 proc = subprocess.Popen(
-                    ["trace-cmd", "record", "-e", ",".join(events), "-o", out_dat],
+                    cmd,
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
                 )

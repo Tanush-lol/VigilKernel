@@ -1,5 +1,7 @@
 /*
  * UEBA exec monitor: trace execve (process execution).
+ * Uses tracepoint syscalls/sys_enter_execve for reliable argument access
+ * across kernel versions (4.17+ changed syscall wrapper calling convention).
  * Extracts: PID, UID, comm, full filename, optional argv prefix.
  * Submit event via BPF_PERF_OUTPUT to user space.
  * BCC compiles and loads this.
@@ -23,14 +25,12 @@ struct exec_event_t {
 BPF_PERF_OUTPUT(exec_events);
 
 /*
- * Syscall entry for execve. Arguments from pt_regs: arg1 = filename, arg2 = argv.
- * Attach as kprobe to __x64_sys_execve or sys_execve (BCC picks correct symbol).
+ * Tracepoint: syscalls/sys_enter_execve
+ * args->filename is the path, args->argv is the argument array.
+ * This works reliably on all kernel versions without the __x64_sys wrapper issue.
  */
-int trace_execve_entry(struct pt_regs *ctx)
+TRACEPOINT_PROBE(syscalls, sys_enter_execve)
 {
-    const char __user *filename = (const char __user *)PT_REGS_PARM1(ctx);
-    const char __user *const __user *argv = (const char __user *const __user *)PT_REGS_PARM2(ctx);
-
     u64 pid_tgid = bpf_get_current_pid_tgid();
     u32 pid = pid_tgid >> 32;
     u32 uid = bpf_get_current_uid_gid() & 0xFFFFFFFFULL;
@@ -41,18 +41,20 @@ int trace_execve_entry(struct pt_regs *ctx)
     ev.uid = uid;
     bpf_get_current_comm(&ev.comm, sizeof(ev.comm));
 
-    if (filename) {
-        bpf_probe_read_user_str(&ev.filename, sizeof(ev.filename), filename);
+    const char *fn = args->filename;
+    if (fn) {
+        bpf_probe_read_user_str(&ev.filename, sizeof(ev.filename), fn);
     }
 
+    const char *const *argv = args->argv;
     if (argv) {
-        const char __user *arg0 = NULL;
+        const char *arg0 = NULL;
         bpf_probe_read_user(&arg0, sizeof(arg0), argv);
         if (arg0) {
             bpf_probe_read_user_str(&ev.argv, sizeof(ev.argv), arg0);
         }
     }
 
-    exec_events.perf_submit(ctx, &ev, sizeof(ev));
+    exec_events.perf_submit(args, &ev, sizeof(ev));
     return 0;
 }
