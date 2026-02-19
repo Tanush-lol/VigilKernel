@@ -1,9 +1,8 @@
 /*
  * UEBA exec monitor: trace execve (process execution).
- * Uses tracepoint syscalls/sys_enter_execve for reliable argument access
- * across kernel versions (4.17+ changed syscall wrapper calling convention).
- * Extracts: PID, UID, comm, full filename, optional argv prefix.
- * Submit event via BPF_PERF_OUTPUT to user space.
+ * Uses tracepoint syscalls/sys_enter_execve for reliable argument access.
+ * Uses BPF_PERCPU_ARRAY for the event struct since it exceeds the
+ * 512-byte BPF stack limit (struct is 544 bytes).
  * BCC compiles and loads this.
  */
 #include <uapi/linux/ptrace.h>
@@ -24,26 +23,29 @@ struct exec_event_t {
 };
 BPF_PERF_OUTPUT(exec_events);
 
-/*
- * Tracepoint: syscalls/sys_enter_execve
- * args->filename is the path, args->argv is the argument array.
- * This works reliably on all kernel versions without the __x64_sys wrapper issue.
- */
+/* Per-CPU scratch space to avoid blowing the 512-byte stack limit */
+BPF_PERCPU_ARRAY(exec_heap, struct exec_event_t, 1);
+
 TRACEPOINT_PROBE(syscalls, sys_enter_execve)
 {
-    u64 pid_tgid = bpf_get_current_pid_tgid();
-    u32 pid = pid_tgid >> 32;
-    u32 uid = bpf_get_current_uid_gid() & 0xFFFFFFFFULL;
+    u32 zero = 0;
+    struct exec_event_t *ev = exec_heap.lookup(&zero);
+    if (!ev)
+        return 0;
 
-    struct exec_event_t ev = {};
-    ev.timestamp_ns = bpf_ktime_get_ns();
-    ev.pid = pid;
-    ev.uid = uid;
-    bpf_get_current_comm(&ev.comm, sizeof(ev.comm));
+    u64 pid_tgid = bpf_get_current_pid_tgid();
+    ev->timestamp_ns = bpf_ktime_get_ns();
+    ev->pid = pid_tgid >> 32;
+    ev->uid = bpf_get_current_uid_gid() & 0xFFFFFFFFULL;
+    bpf_get_current_comm(&ev->comm, sizeof(ev->comm));
+
+    /* Zero out the string fields to avoid stale data from previous events */
+    __builtin_memset(&ev->filename, 0, FILENAME_LEN);
+    __builtin_memset(&ev->argv, 0, ARGV_LEN);
 
     const char *fn = args->filename;
     if (fn) {
-        bpf_probe_read_user_str(&ev.filename, sizeof(ev.filename), fn);
+        bpf_probe_read_user_str(&ev->filename, sizeof(ev->filename), fn);
     }
 
     const char *const *argv = args->argv;
@@ -51,10 +53,10 @@ TRACEPOINT_PROBE(syscalls, sys_enter_execve)
         const char *arg0 = NULL;
         bpf_probe_read_user(&arg0, sizeof(arg0), argv);
         if (arg0) {
-            bpf_probe_read_user_str(&ev.argv, sizeof(ev.argv), arg0);
+            bpf_probe_read_user_str(&ev->argv, sizeof(ev->argv), arg0);
         }
     }
 
-    exec_events.perf_submit(args, &ev, sizeof(ev));
+    exec_events.perf_submit(args, ev, sizeof(*ev));
     return 0;
 }
